@@ -1,5 +1,6 @@
 # PetMe
-Addon for AshitaXI v4 that displays pet information including pet level &amp; duration.
+Addon for AshitaXI v4 that displays BST pet information including pet level &amp; duration. This works for both
+charmed & jug pets. (Have not currently tested w/ DRG or SMN.)
 
 ## Notes:
 1)	PetMe must already be loaded during a charm/call beast action to get the pet level & duration.
@@ -10,7 +11,9 @@ Addon for AshitaXI v4 that displays pet information including pet level &amp; du
 3)	If you use any gear with +charm on it, you need to use this command to set the total +charm value
 	from any gear you will be wearing while charming.I plan to eventually automate
 	this, but for the time being is necessary.
-4)	This is my first foray into LUA and this code is very much a work in progress. If you have helpful
+4)	This addon was developed using HorizonXI. It should work fine on retail / other private servers,
+   	however, the jug pet level/duration table will need to be updated w/ appropriate values.
+5)	This is my first foray into LUA and this code is very much a work in progress. If you have helpful
 	suggestions and/or issues, you're welcome to DM me on discord @mathmatic.
 
 ## Planning to add:
