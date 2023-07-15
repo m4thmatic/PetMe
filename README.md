@@ -19,6 +19,8 @@ charmed & jug pets. (Have not currently tested w/ DRG or SMN.)
 ## Planning to add:
 1) Automated calculation of +CHR & +charm
 2) Storing settings & possibly adding a GUI config
+3) Take into account using ability Familiar
+4) Take into account Sic/Ready recast merits
 
 ## Commands:
 ### /petme or /pm

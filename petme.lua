@@ -21,44 +21,23 @@
 
 addon.author   = 'MathMatic';
 addon.name     = 'PetMe';
-addon.desc     = 'Display the BST (and /BST) pet level & estimated charm duration.';
-addon.version  = '0.2';
+addon.desc     = 'Display BST pet information. Level, Charm Duration, Sic & Ready Charges.';
+addon.version  = '0.3';
+
+--[[
+Todo:
+1) Automated calculation of +CHR & +charm
+2) Storing settings & possibly adding a GUI config
+3) Take into account using ability Familiar
+--]]
+
 
 require ('common');
 local imgui = require('imgui');
 
---[[
-Notes:
-1)	PetMe must already be loaded during a charm/call beast action to get the pet level & duration.
-2)	If you use any form of gearswapping for Charm, you need to use use the setchr command to overide
-	the value for any additional CHR that you get from gear when charming. This will eventually be
-	automated, but for the time being is necessary.
-		e.g. If your only +CHR gear is 2 Hope Rings (+2CHR each), use the command /pm setchr 4
-3)  If you use any gear with +charm on it, you need to use this command to set the total +charm value
-	from any gear you will be wearing while charming. This will eventually be automated, but for the
-	time being is necessary.
-
-4)  This is my first foray into LUA and this code is very much a work in progress. I prioritized
-	getting something working & out there over perfect code (I'm still learning) and desired features. If
-	you have helpful suggestions and/or issues, you're welcome to DM me on discord @mathmatic.
-
-Planning to add (in no particular order):
-1) Automated calculation of +CHR & +charm
-2) Storing settings & possibly adding a GUI config
-
-Commands:
- Use: /petme or /pm
-
- /pm setchr [val] 			| Set +chr override (use this if you are gearswapping for charming)
- /pm setcharm [val]			| Set +charm overide (use this if you using gear with +charm for charming)
-
- /pm resetchr				| Reset +chr override to default state (value of +chr last time equip menu was open)
- /pm resetcharm				| Reset +charm override to default state (0)
-
- /pm showstats [true/false]	| Turn the display of pet stats (HP/MP/TP) on or off [default: true]
- /pm shownopet [true/false]	| Always display the pet window (even w/o a pet) [default: false]
-
---]]
+--Memory pointer coppied from tCrossBar by Thorny
+local AbilityRecastPointer = ashita.memory.find('FFXiMain.dll', 0, '894124E9????????8B46??6A006A00508BCEE8', 0x19, 0);
+AbilityRecastPointer = ashita.memory.read_uint32(AbilityRecastPointer);
 
 --------------------------------------------------------------------
 local statOveride = T{
@@ -75,7 +54,7 @@ local mobInfo = T{
 	charmUntil = 0;	
 	showStats = true;
 	showNoPet = false;
-	jugPet = 1;
+	jugPet = 0;
 }
 
 ---------------------------Lookup Tables---------------------------
@@ -333,9 +312,6 @@ ashita.events.register('packet_out', 'packet_out_cb', function (e)
 				end
 			end
 		end
-
-
-
 	end
 end);
 
@@ -385,12 +361,12 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 	end
 
     local pet = GetEntity(player.PetTargetIndex);
-    if (pet == nil) then -- if no pet, set pet to false, reset data to defaults, & return
+    if (pet == nil) then -- if no pet, set pet to false & return
 		mobInfo.hasPet = false;
-		mobInfo.mobLevel = 0;
-		mobInfo.charmingMob = false;
-		mobInfo.charmMobTarget = 0;
-		mobInfo.charmMobTargetIndex = 0;
+		--mobInfo.mobLevel = 0;
+		--mobInfo.charmingMob = false;
+		--mobInfo.charmMobTarget = 0;
+		--mobInfo.charmMobTargetIndex = 0;
 		--mobInfo.charmUntil = 0;	-- HorizonXI allows jug pets to persist through zoning, so comment out
 		--mobInfo.jugPet = 0;		-- HorizonXI allows jug pets to persist through zoning, so comment out
 
@@ -399,24 +375,22 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 		end
     end
 
-	mobInfo.hasPet = true;
-
-	if (mobInfo.jugPet == 1) then
-		calculateJugPetTime(pet.Name);
-		mobInfo.jugPet = 2;
-	end
-
 	local windowSize = 300;
     imgui.SetNextWindowBgAlpha(0.8);
     imgui.SetNextWindowSize({ windowSize, -1, }, ImGuiCond_Always);
 	if (imgui.Begin('PetMe', true, bit.bor(ImGuiWindowFlags_NoDecoration))) then
---	if (imgui.Begin('PetMe', true, bit.bor(ImGuiWindowFlags_NoDecoration, ImGuiWindowFlags_AlwaysAutoResize, ImGuiWindowFlags_NoFocusOnAppearing, ImGuiWindowFlags_NoNav))) then
 
 		if (pet == nil) then
 			imgui.Text("No pet");
 		else
+			mobInfo.hasPet = true;
 
-				-- Obtain and prepare pet information..
+			if (mobInfo.jugPet == 1) then
+				calculateJugPetTime(pet.Name);
+				mobInfo.jugPet = 2;
+			end
+			
+			-- Obtain and prepare pet information..
 			local petmp = AshitaCore:GetMemoryManager():GetPlayer():GetPetMPPercent();
 			local pettp = AshitaCore:GetMemoryManager():GetPlayer():GetPetTP();
 			local dist  = ('%.1f'):fmt(math.sqrt(pet.Distance));
@@ -435,7 +409,6 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 			imgui.Text(dist .. "m");
 			imgui.Text("Charm Duration: ");
 			imgui.SameLine();
-			--imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.GetColumnWidth() - x - imgui.GetStyle().FramePadding.x);
 			if (mobInfo.charmUntil ~= 0) then
 				local duration = math.floor(mobInfo.charmUntil - os.clock());
 				local hrs = math.floor(duration / 3600);
@@ -445,6 +418,24 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 				imgui.Text(tostring(hrs) .. ":" .. tostring(mins) .. ":" .. tostring(secs) .. "s");
 			else
 				imgui.Text("???");
+			end
+
+
+			for i = 1,31 do
+				local compId = ashita.memory.read_uint8(AbilityRecastPointer + (i * 8) + 3);
+				if (compId == 102) then
+					readyTimer = ashita.memory.read_uint32(AbilityRecastPointer + (i * 4) + 0xF8);
+					break;
+				end
+			end
+
+			readyTimer = math.floor(readyTimer / 60);
+
+			if (mobInfo.jugPet ~= 0) then
+				local chargesRemaining = math.floor((135 - readyTimer) / 45)
+				imgui.Text("Ready Charges: " .. chargesRemaining .. " (" .. tostring(readyTimer%45) .. "s)");
+			else
+				imgui.Text("Sic Recast: " .. tostring(readyTimer) .. "s");
 			end
 
 			if (mobInfo.showStats == true) then
