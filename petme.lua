@@ -429,15 +429,16 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 				end
 			end
 
-			readyTimer = math.floor(readyTimer / 60);
+			if (readyTimer ~= nil) then
+				readyTimer = math.floor(readyTimer / 60);
 
-			if (mobInfo.jugPet ~= 0) then
-				local chargesRemaining = math.floor((135 - readyTimer) / 45)
-				imgui.Text("Ready Charges: " .. chargesRemaining .. " (" .. tostring(readyTimer%45) .. "s)");
-			else
-				imgui.Text("Sic Recast: " .. tostring(readyTimer) .. "s");
+				if (mobInfo.jugPet ~= 0) then
+					local chargesRemaining = math.floor((135 - readyTimer) / 45)
+					imgui.Text("Ready Charges: " .. chargesRemaining .. " (" .. tostring(readyTimer%45) .. "s)");
+				else
+					imgui.Text("Sic Recast: " .. tostring(readyTimer) .. "s");
+				end
 			end
-
 			if (mobInfo.showStats == true) then
 				if pet.HPPercent > 75 then
 					hpBarColor = colors.HpBarFull
