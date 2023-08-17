@@ -21,23 +21,11 @@
 
 addon.author   = 'MathMatic';
 addon.name     = 'PetMe';
-addon.desc     = 'Display BST pet information. Level, Charm Duration, Sic & Ready Charges.';
-addon.version  = '0.3';
-
---[[
-Todo:
-1) Automated calculation of +CHR & +charm
-2) Storing settings & possibly adding a GUI config
-3) Take into account using ability Familiar
---]]
-
+addon.desc     = 'Display BST pet information. Level, Charm Duration, Sic & Ready Charges, Reward Recast.';
+addon.version  = '0.4';
 
 require ('common');
 local imgui = require('imgui');
-
---Memory pointer coppied from tCrossBar by Thorny
-local AbilityRecastPointer = ashita.memory.find('FFXiMain.dll', 0, '894124E9????????8B46??6A006A00508BCEE8', 0x19, 0);
-AbilityRecastPointer = ashita.memory.read_uint32(AbilityRecastPointer);
 
 --------------------------------------------------------------------
 local statOveride = T{
@@ -157,7 +145,7 @@ function calculateCharmTime()
 	--Pre-Gear Charm Duration = Base Charm Duration × % Change
 	local preGearDuration = baseCharmDuration * lvlModifier;
 	--Charm Duration = Pre-gear Charm Duration × ( 1 + 0.05×(Charm+ in gear) )
-	local charmDuration = preGearDuration * (1 + 0.05 * charm);
+	local charmDuration = preGearDuration * (1 + (0.05 * charm));
 	mobInfo.charmUntil = os.clock() + charmDuration;
 end
 
@@ -198,6 +186,53 @@ function getJugLevel(petName)
     end
 
 	return petLevel;
+end
+
+--------------------------------------------------------------------------------
+---This function is largely based off of code taken from tCrossBar by Thorny----
+--------------------------------------------------------------------------------
+local AbilityRecastPointer = ashita.memory.find('FFXiMain.dll', 0, '894124E9????????8B46??6A006A00508BCEE8', 0x19, 0);
+AbilityRecastPointer = ashita.memory.read_uint32(AbilityRecastPointer);
+local function GetReadySicRecast()
+	--Ready/Sic == ability ID 103
+	local readyAbilityID = 102;
+
+	for i = 1,31 do
+        local compId = ashita.memory.read_uint8(AbilityRecastPointer + (i * 8) + 3);
+        if (compId == readyAbilityID) then
+            modifier = ashita.memory.read_int16(AbilityRecastPointer + (i * 8) + 4);
+            recast = ashita.memory.read_uint32(AbilityRecastPointer + (i * 4) + 0xF8);
+        end
+    end
+
+	if (recast == nil) then
+		return -1, -1;
+    end
+
+	recast = math.floor(recast / 60);
+
+	return recast, modifier;
+end
+
+local function GetRewardRecast()
+	--Reward == ability ID 103
+	local rewardAbilityID = 103;
+	
+	for i = 1,31 do
+		local compId = ashita.memory.read_uint8(AbilityRecastPointer + (i * 8) + 3);
+		if (compId == rewardAbilityID) then
+			modifier = ashita.memory.read_int16(AbilityRecastPointer + (i * 8) + 4);
+			recast = ashita.memory.read_uint32(AbilityRecastPointer + (i * 4) + 0xF8);
+		end
+	end
+	
+	if (recast == nil) then
+		return -1, -1;
+	end
+	
+	recast = math.floor(recast / 60);
+	
+	return recast, modifier;
 end
 
 --------------------------------------------------------------------
@@ -265,8 +300,6 @@ end);
 ashita.events.register('packet_out', 'packet_out_cb', function (e)
 	if(e.id == 0xDD) then --Outgoing "check" packet
 		if (mobInfo.charmingMob == true) then
-			--print("charming");
-
 			--Modify packet to use the charm target instead of whatever the player is actually targetting
 			pktdata = e.data:totable();
 			local pckt = struct.pack("BBBBHBBHBBBBBB",pktdata[1],pktdata[2],pktdata[3],pktdata[4],mobInfo.charmMobTarget,pktdata[7],pktdata[8],mobInfo.charmMobTargetIndex,pktdata[11],pktdata[12],pktdata[13],pktdata[14],pktdata[15],pktdata[16]);
@@ -275,7 +308,6 @@ ashita.events.register('packet_out', 'packet_out_cb', function (e)
 	end
 
 	if (e.id == 0x1A) then --Outgoing action packet
-
 		local target = struct.unpack('H', e.data, 0x04 + 0x01);
 		local targetIndex = struct.unpack('H', e.data, 0x08 + 0x01);
 		local category = struct.unpack('H', e.data, 0x0A + 0x01);
@@ -318,15 +350,14 @@ end);
 --------------------------------------------------------------------
 ashita.events.register('packet_in', 'packet_in_cb', function (e)
 
-	if (e.id == 0x028) then --Actiion (action 28, action msg 29)
-		--Should probably use this to determine when call beast is used.
-		--Should probably get +chr/+charm & calculate charm duration here.
+	--Action (action 28, action msg 29)
+	--if (e.id == 0x028) then 
+		--Possibly use this to determine when call beast is used.
+		--Possibly get +chr/+charm & calculate charm duration here.
 		--print(e.size);
-	end
-
-	if (e.id == 0x050) then
-	end
-
+	--end
+	--if (e.id == 0x050) then
+	--end
 
     if (e.id == 0x029) then -- Check packet
 		--local target = struct.unpack('H', e.data, 0x04 + 0x01);
@@ -390,13 +421,13 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 				mobInfo.jugPet = 2;
 			end
 			
-			-- Obtain and prepare pet information..
+			-- Obtain pet info
 			local petmp = AshitaCore:GetMemoryManager():GetPlayer():GetPetMPPercent();
 			local pettp = AshitaCore:GetMemoryManager():GetPlayer():GetPetTP();
 			local dist  = ('%.1f'):fmt(math.sqrt(pet.Distance));
 			local x, _  = imgui.CalcTextSize(dist);
 
-			-- Display the pets information..
+			-- Display pet name / level / distance
 			if (mobInfo.jugPet ~= 0) then
 				imgui.Text(pet.Name .. " (Lvl " .. getJugLevel(pet.Name) .. ")");
 			elseif (mobInfo.mobLevel > 0) then
@@ -407,38 +438,43 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 			imgui.SameLine();
 			imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.GetColumnWidth() - x - imgui.GetStyle().FramePadding.x);
 			imgui.Text(dist .. "m");
-			imgui.Text("Charm Duration: ");
-			imgui.SameLine();
+
+			-- Display pet duration
 			if (mobInfo.charmUntil ~= 0) then
 				local duration = math.floor(mobInfo.charmUntil - os.clock());
 				local hrs = math.floor(duration / 3600);
 				local mins = math.floor((duration % 3600) / 60);
 				local secs = duration % 60;
 
-				imgui.Text(tostring(hrs) .. ":" .. tostring(mins) .. ":" .. tostring(secs) .. "s");
+				imgui.Text(string.format("Pet Duration: %01d:%02d:%02d", hrs, mins, secs));
 			else
 				imgui.Text("???");
 			end
 
-
-			for i = 1,31 do
-				local compId = ashita.memory.read_uint8(AbilityRecastPointer + (i * 8) + 3);
-				if (compId == 102) then
-					readyTimer = ashita.memory.read_uint32(AbilityRecastPointer + (i * 4) + 0xF8);
-					break;
-				end
-			end
-
-			if (readyTimer ~= nil) then
-				readyTimer = math.floor(readyTimer / 60);
-
+			-- Display ready/sic recast
+			local readyTimer, modifier = GetReadySicRecast();
+			if (readyTimer >= 0) then
 				if (mobInfo.jugPet ~= 0) then
-					local chargesRemaining = math.floor((135 - readyTimer) / 45)
-					imgui.Text("Ready Charges: " .. chargesRemaining .. " (" .. tostring(readyTimer%45) .. "s)");
+					local chargesRemaining = math.floor((90 + modifier - readyTimer) / modifier)
+					local nextCharge = readyTimer % modifier;
+					imgui.Text("Ready: " .. chargesRemaining .. " (" .. tostring(nextCharge) .. "s)");
 				else
 					imgui.Text("Sic Recast: " .. tostring(readyTimer) .. "s");
 				end
 			end
+
+			-- Display reward recast
+			local rewardTimer, modif = GetRewardRecast();
+			if (rewardTimer > 0) then
+				imgui.SameLine();
+				local reMins = math.floor(rewardTimer / 60);
+				local reSecs = rewardTimer % 60;
+				rewText = string.format("Reward: %01d:%02d", reMins, reSecs);
+				imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.GetColumnWidth() - imgui.CalcTextSize(rewText));
+				imgui.Text(rewText);
+			end
+
+			-- Dislay pet stat bars (HPP,MPP,TP)
 			if (mobInfo.showStats == true) then
 				if pet.HPPercent > 75 then
 					hpBarColor = colors.HpBarFull

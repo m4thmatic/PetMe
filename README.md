@@ -1,26 +1,44 @@
 # PetMe
-Addon for AshitaXI v4 that displays BST pet information including pet level &amp; duration. This works for both
-charmed & jug pets. (Have not currently tested w/ DRG or SMN.)
+Addon for AshitaXI v4 that displays BST pet information (for both charmed & jug pets). As of the moment
+PetMe displays the following information:
+	- Pet name & distance to pet
+	- Pet level
+	- Charm duration
+	- Ready / Sic recast timers (should take merits into account)
+	- Reward recast timer
+	- Pet HP/MP/TP
+I plan to eventually add additional features for other pet jobs, but if nothing else, for right now
+it will at least show basic pet information for them (HP/MP/TP).
 
 ## Notes:
 1)	PetMe must already be loaded during a charm/call beast action to get the pet level & duration.
-2)	If you use any form of gearswapping for Charm, you need to use use the `setchr` command to overide
-	the value for any additional CHR that you get from gear when charming. I plan to eventually automate
-	this, but for the time being is necessary.  
+2)	If you use any form of gearswapping for +CHR, you will need to use use the `setchr` command to overide
+	the value for any additional CHR that you get from gear when charming. I plan to eventually automate this,
+	but for the time being is necessary. Alternatively, you can manually set the CHR overide value in petme.lua
+	on line 42.
    	- Example: If your only +CHR gear is 2 Hope Rings (+2CHR each), use the command `/pm setchr 4`
-3)	If you use any gear with +charm on it, you need to use this command to set the total +charm value
-	from any gear you will be wearing while charming.I plan to eventually automate
-	this, but for the time being is necessary.
-4)	This addon was developed using HorizonXI. It should work fine on retail / other private servers,
-   	however, the jug pet level/duration table will need to be updated w/ appropriate values.
-5)	This is my first foray into LUA and this code is very much a work in progress. If you have helpful
-	suggestions and/or issues, you're welcome to DM me on discord @mathmatic.
+3)	If you use any gear with +charm on it, you need to use the `setcharm` command to set the total +charm value
+	from any gear you will be wearing while charming. I plan to eventually automate this, but for the time being
+	is necessary.Alternatively, you can manually set the charm overide value in petme.lua on line 43.
+4)	I personally only play on the HorizonXI private server. This addon should work fine on retail / other private
+	servers, however, the jug pet level/duration table will need to be updated w/ appropriate values & additional pets.
+5)	This is my first foray into LUA and this code is very much a work in progress (I know, it's all one big mess of
+	a file). If you have helpful suggestions, issues, thoughts, etc. you're welcome to DM me on discord @mathmatic.
 
 ## Planning to add:
 1) Automated calculation of +CHR & +charm
 2) Storing settings & possibly adding a GUI config
 3) Take into account using ability Familiar
-4) Take into account Sic/Ready recast merits
+4) Pet buffs / debuffs (unclear on how feasible this is)
+5) Pet resting status
+
+--[[
+Todo:
+1) Automated calculation of +CHR & +charm
+2) Storing settings & possibly adding a GUI config
+3) Take into account using ability Familiar
+
+--]]
 
 ## Commands:
 ### /petme or /pm
