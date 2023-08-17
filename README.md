@@ -1,12 +1,12 @@
 # PetMe
 Addon for AshitaXI v4 that displays BST pet information (for both charmed & jug pets). As of the moment
 PetMe displays the following information:
-	- Pet name & distance to pet
-	- Pet level
-	- Charm duration
-	- Ready / Sic recast timers (should take merits into account)
-	- Reward recast timer
-	- Pet HP/MP/TP
+* Pet name & distance to pet
+* Pet level
+* Charm duration
+* Ready / Sic recast timers (should take merits into account)
+* Reward recast timer
+* Pet HP/MP/TP
 I plan to eventually add additional features for other pet jobs, but if nothing else, for right now
 it will at least show basic pet information for them (HP/MP/TP).
 
