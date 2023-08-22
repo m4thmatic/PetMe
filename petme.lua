@@ -21,17 +21,22 @@
 
 addon.author   = 'MathMatic';
 addon.name     = 'PetMe';
-addon.desc     = 'Display BST pet information. Level, Charm Duration, Sic & Ready Charges, Reward Recast.';
-addon.version  = '0.4';
+addon.desc     = 'Display BST pet information. Level, Charm Duration, Sic & Ready Charges, Reward Recast, Pet Target.';
+addon.version  = '0.5';
 
 require ('common');
+local settings = require('settings');
 local imgui = require('imgui');
 
 --------------------------------------------------------------------
-local statOveride = T{
+local defaultConfig = T{
 	chr = nil,
 	charm = nil,
+	showPetStats = true;
+	showNoPet = false;
+	showPetTarget = true;
 }
+local config = settings.load(defaultConfig);
 
 local mobInfo = T{
 	hasPet = false;
@@ -40,9 +45,8 @@ local mobInfo = T{
 	charmMobTarget = 0;
 	charmMobTargetIndex = 0;
 	charmUntil = 0;	
-	showStats = true;
-	showNoPet = false;
 	jugPet = 0;
+	petTarget = nil;
 }
 
 ---------------------------Lookup Tables---------------------------
@@ -53,6 +57,7 @@ local colors = {
 	HpBar25        = { 0.80, 0.10, 0.10, 1.0 },
 	MpBar          = { 0.20, 0.20, 0.80, 1.0 },
 	TpBar          = { 0.40, 0.40, 0.40, 1.0 },
+	TargetBar      = { 0.70, 0.40, 0.40, 1.0 },
 }
 
 local dLevel = {
@@ -115,11 +120,11 @@ function calculateCharmTime()
 	local staff		= 0;
 
 	-- If override set, then use those values
-	if (statOveride.chr ~= nil) then
-		modChr = statOveride.chr;
+	if (config.chr ~= nil) then
+		modChr = config.chr;
 	end
-	if (statOveride.charm ~= nil) then
-		charm = statOveride.charm;
+	if (config.charm ~= nil) then
+		charm = config.charm;
 	end
 
 	local totalChr = baseChr + modChr;
@@ -235,6 +240,19 @@ local function GetRewardRecast()
 	return recast, modifier;
 end
 
+--------------------------------------------------------------------------------
+-------------- This function is copied from the PetInfo addon ------------------
+--------------------------------------------------------------------------------
+local function GetEntityByServerId(sid)
+    for x = 0, 2303 do
+        local ent = GetEntity(x);
+        if (ent ~= nil and ent.ServerId == sid) then
+            return ent;
+        end
+    end
+    return nil;
+end
+
 --------------------------------------------------------------------
 ashita.events.register('load', 'load_cb', function()
 
@@ -242,8 +260,9 @@ end);
 
 --------------------------------------------------------------------
 ashita.events.register('unload', 'unload_cb', function()
-    --settings.save();
+
 end);
+
 
 --------------------------------------------------------------------
 ashita.events.register('command', 'command_cb', function (e)
@@ -265,35 +284,46 @@ ashita.events.register('command', 'command_cb', function (e)
 	if (#args == 2 and args[2]:any('resetchr', 'resetcharm')) then
 		if (args[2] == 'resetchr') then
         	print("Clearing overide value for +CHR");
+			config.chr = nil;
 		elseif (args[2] == 'resetcharm') then
 			print("Clearing overide value for +Charm");
+			config.charm = nil;
 		end
-        return;
+
+		settings.save();
+		return;
     end
 
-    if (#args == 3 and args[2]:any('setchr', 'setcharm', 'showstats', 'shownopet')) then
+    if (#args == 3 and args[2]:any('setchr', 'setcharm', 'showstats', 'shownopet', 'showtarget')) then
 		if (args[2] == 'setchr') then
         	print("Setting overide value for +CHR to " .. args[3]);
-			statOveride.chr = tonumber(args[3]);
+			config.chr = tonumber(args[3]);
 		elseif (args[2] == 'setcharm') then
 			print("Setting overide value for +Charm to " .. args[3]);
-			statOveride.charm = tonumber(args[3]);
+			config.charm = tonumber(args[3]);
 		elseif (args[2] == 'showstats') then
 			if (args[3] == "true") then
-				mobInfo.showStats = true;
+				config.showPetStats = true;
 			elseif (args[3] == "false") then
-				mobInfo.showStats = false;
+				config.showPetStats = false;
 			end
 		elseif (args[2] == 'shownopet') then
 			if (args[3] == "true") then
-				mobInfo.showNoPet = true;
+				config.showNoPet = true;
 			elseif (args[3] == "false") then
-				mobInfo.showNoPet = false;
+				config.showNoPet = false;
+			end
+		elseif (args[2] == 'showtarget') then
+			if (args[3] == "true") then
+				config.showPetTarget = true;
+			elseif (args[3] == "false") then
+				config.showPetTarget = false;
 			end
 		end
+
+		settings.save();
         return;
     end	
-
 end);
 
 --------------------------------------------------------------------
@@ -378,6 +408,24 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
 			end
 		end
     end
+
+	-- Packet: Pet Sync (copied from PetInfo)
+	if (e.id == 0x0068) then
+		-- Obtain the player entitiy..
+		local player = GetPlayerEntity();
+		if (player == nil) then
+			mobInfo.target = nil;
+			return;
+		end
+	
+		-- Update the players pet target..
+		local owner = struct.unpack('I', e.data_modified, 0x08 + 0x01);
+		if (owner == player.ServerId) then
+			mobInfo.target = struct.unpack('I', e.data_modified, 0x14 + 0x01);
+		end
+	
+		return;
+	end
 end);
 
 --------------------------------------------------------------------
@@ -401,7 +449,7 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 		--mobInfo.charmUntil = 0;	-- HorizonXI allows jug pets to persist through zoning, so comment out
 		--mobInfo.jugPet = 0;		-- HorizonXI allows jug pets to persist through zoning, so comment out
 
-		if (mobInfo.showNoPet == false) then
+		if (config.showNoPet == false) then
         	return;
 		end
     end
@@ -475,7 +523,7 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 			end
 
 			-- Dislay pet stat bars (HPP,MPP,TP)
-			if (mobInfo.showStats == true) then
+			if (config.showPetStats == true) then
 				if pet.HPPercent > 75 then
 					hpBarColor = colors.HpBarFull
 				elseif pet.HPPercent > 50 then
@@ -502,6 +550,33 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 				imgui.PushStyleColor(ImGuiCol_PlotHistogram, colors.TpBar);
 				imgui.ProgressBar(pettp / 3000,  { windowSize/3-10, 15 }, tostring(pettp));
 			end
+
+			-- Display pet's target
+			if (config.showPetTarget and mobInfo.target ~= nil and mobInfo.target ~= 0) then
+				local target = GetEntityByServerId(mobInfo.target);
+				if (target == nil or target.ActorPointer == 0 or target.HPPercent == 0) then
+					mobInfo.target = nil;
+				else
+					dist = ('%.1f'):fmt(math.sqrt(target.Distance));
+					x, _ = imgui.CalcTextSize(dist);
+			
+					local tname = target.Name;
+					if (tname == nil) then
+						tname = '';
+					end
+			
+					imgui.Separator();
+					imgui.Text(tname);
+					imgui.SameLine();
+					imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.GetColumnWidth() - x - imgui.GetStyle().FramePadding.x);
+					imgui.Text(dist);
+					imgui.Text('HP:');
+					imgui.SameLine();
+					imgui.PushStyleColor(ImGuiCol_PlotHistogram, colors.TargetBar);
+					imgui.ProgressBar(target.HPPercent / 100, { -1, 16 });
+				end
+			end
+
 		end
     end
     imgui.End();
