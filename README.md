@@ -8,6 +8,7 @@ PetMe displays the following information:
 * Reward recast timer
 * Pet HP/MP/TP
 * Pet Target
+
 I plan to eventually add additional features for other pet jobs, but if nothing else, for right now
 it will at least show basic pet information for them (HP/MP/TP).
 
