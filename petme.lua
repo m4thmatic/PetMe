@@ -22,7 +22,7 @@
 addon.author   = 'MathMatic';
 addon.name     = 'PetMe';
 addon.desc     = 'Display BST pet information. Level, Charm Duration, Sic & Ready Charges, Reward Recast, Pet Target.';
-addon.version  = '0.5';
+addon.version  = '0.6';
 
 require ('common');
 local settings = require('settings');
@@ -30,8 +30,7 @@ local imgui = require('imgui');
 
 --------------------------------------------------------------------
 local defaultConfig = T{
-	chr = nil,
-	charm = nil,
+	charm = 0,
 	showPetStats = true;
 	showNoPet = false;
 	showPetTarget = true;
@@ -95,13 +94,13 @@ local jugpet = { --NOTE: These are HorizonXI specific
     {petName="MiteFamiliar",    maxlevel=55, duration=60},
     {petName="KeenearedSteffi", maxlevel=75, duration=90},
     {petName="LullabyMelodia",  maxlevel=75, duration=60},
-    {petName="FlowerpotBen",    maxlevel=75, duration=60},
+    {petName="FlowerpotBill",   maxlevel=75, duration=60},
     {petName="SaberSiravarde",  maxlevel=75, duration=60},
     {petName="FunguarFamiliar", maxlevel=65, duration=60},
     {petName="ShellbusterOrob", maxlevel=75, duration=60},
     {petName="ColdbloodComo",   maxlevel=75, duration=60},
     {petName="CourierCarrie",   maxlevel=75, duration=30},
-    {petName="Homunculus",       maxlevel=75, duration=60},
+    {petName="Homunculus",      maxlevel=75, duration=60},
     {petName="VoraciousAudrey", maxlevel=75, duration=60},
     {petName="AmbusherAllie",   maxlevel=75, duration=60},
     {petName="PanzerGalahad",   maxlevel=75, duration=60},
@@ -115,19 +114,8 @@ function calculateCharmTime()
 	-- Set base values
 	local playerLvl = AshitaCore:GetMemoryManager():GetPlayer():GetMainJobLevel();
 	local baseChr   = AshitaCore:GetMemoryManager():GetPlayer():GetStat(6);
-	local modChr    = AshitaCore:GetMemoryManager():GetPlayer():GetStatModifier(6);
-	local charm     = 0;
-	local staff		= 0;
-
-	-- If override set, then use those values
-	if (config.chr ~= nil) then
-		modChr = config.chr;
-	end
-	if (config.charm ~= nil) then
-		charm = config.charm;
-	end
-
-	local totalChr = baseChr + modChr;
+	--local charm     = 0;
+	--local staff		= 0;
 
 	-- calculate level difference between player & pet
 	local levelDifference = playerLvl - mobInfo.mobLevel;
@@ -146,11 +134,11 @@ function calculateCharmTime()
 	end
 
 	--Base Charm Duration (seconds) = floor(1.25 × CHR + 150 )
-	local baseCharmDuration = math.floor(1.25 * totalChr + 150);
+	local baseCharmDuration = math.floor(1.25 * baseChr + 150);
 	--Pre-Gear Charm Duration = Base Charm Duration × % Change
 	local preGearDuration = baseCharmDuration * lvlModifier;
 	--Charm Duration = Pre-gear Charm Duration × ( 1 + 0.05×(Charm+ in gear) )
-	local charmDuration = preGearDuration * (1 + (0.05 * charm));
+	local charmDuration = preGearDuration * (1 + (0.05 * config.charm));
 	mobInfo.charmUntil = os.clock() + charmDuration;
 end
 
@@ -276,29 +264,23 @@ ashita.events.register('command', 'command_cb', function (e)
     e.blocked = true;
 
 
-    if (#args == 2 and args[2]:any('setchr', 'setcharm', 'showstats', 'shownopet')) then
+    if (#args == 2 and args[2]:any('setcharm', 'showstats', 'shownopet')) then
         print('Missing parameter for ' .. args[2]);
         return;
     end
 
-	if (#args == 2 and args[2]:any('resetchr', 'resetcharm')) then
-		if (args[2] == 'resetchr') then
-        	print("Clearing overide value for +CHR");
-			config.chr = nil;
-		elseif (args[2] == 'resetcharm') then
+	if (#args == 2 and args[2]:any('resetcharm')) then
+		if (args[2] == 'resetcharm') then
 			print("Clearing overide value for +Charm");
-			config.charm = nil;
+			config.charm = 0;
 		end
 
 		settings.save();
 		return;
     end
 
-    if (#args == 3 and args[2]:any('setchr', 'setcharm', 'showstats', 'shownopet', 'showtarget')) then
-		if (args[2] == 'setchr') then
-        	print("Setting overide value for +CHR to " .. args[3]);
-			config.chr = tonumber(args[3]);
-		elseif (args[2] == 'setcharm') then
+    if (#args == 3 and args[2]:any('setcharm', 'showstats', 'shownopet', 'showtarget')) then
+		if (args[2] == 'setcharm') then
 			print("Setting overide value for +Charm to " .. args[3]);
 			config.charm = tonumber(args[3]);
 		elseif (args[2] == 'showstats') then
@@ -503,17 +485,18 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 			local readyTimer, modifier = GetReadySicRecast();
 			if (readyTimer >= 0) then
 				if (mobInfo.jugPet ~= 0) then
-					local chargesRemaining = math.floor((90 + modifier - readyTimer) / modifier)
-					local nextCharge = readyTimer % modifier;
+					local chargesRemaining = math.floor(((3*modifier) - readyTimer) / modifier)
+					local nextCharge = readyTimer % modifier; --Horizon only?
 					imgui.Text("Ready: " .. chargesRemaining .. " (" .. tostring(nextCharge) .. "s)");
 				else
 					imgui.Text("Sic Recast: " .. tostring(readyTimer) .. "s");
 				end
+				--imgui.Text(readyTimer .. " -- " .. modifier .. " -- ");
 			end
 
 			-- Display reward recast
 			local rewardTimer, modif = GetRewardRecast();
-			if (rewardTimer > 0) then
+			if (rewardTimer > 0) then			
 				imgui.SameLine();
 				local reMins = math.floor(rewardTimer / 60);
 				local reSecs = rewardTimer % 60;
@@ -521,6 +504,15 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 				imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.GetColumnWidth() - imgui.CalcTextSize(rewText));
 				imgui.Text(rewText);
 			end
+
+			-- Display pet acc/att stats
+
+
+
+
+
+
+
 
 			-- Dislay pet stat bars (HPP,MPP,TP)
 			if (config.showPetStats == true) then
