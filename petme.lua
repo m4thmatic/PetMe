@@ -22,7 +22,7 @@
 addon.author   = 'MathMatic';
 addon.name     = 'PetMe';
 addon.desc     = 'Display BST pet information. Level, Charm Duration, Sic & Ready Charges, Reward Recast, Pet Target.';
-addon.version  = '1.0.0';
+addon.version  = '1.1.0';
 
 require ('common');
 local settings = require('settings');
@@ -45,9 +45,12 @@ local defaultConfig = T{
 		petRecasts		= T{true},
 		petStats		= T{true},
 		petTarget		= T{true},
-		alwaysVisible	= T{false},	
+		hideMap			= T{false},
+		hideLog			= T{false},
+		alwaysVisible	= T{false},
 	},
 
+	useHorizonMerits	= T{true},
 	charmGear 			= T{0},
 	charmUntil			= T{0}, -- store jug pet charm time, in case of shutdown
 }
@@ -301,14 +304,30 @@ function GetMenuName()
     return string.gsub(menuName, '\x00', '');
 end
 
---- Determines if the map is open in game, or we are at the login screen
+--- Determines if the window should be hidden
 function hideWindow()
     local menuName = GetMenuName();
-    return menuName:match('menu%s+map.*') ~= nil
-        or menuName:match('menu%s+scanlist.*') ~= nil
-        or menuName:match('menu%s+cnqframe') ~= nil
+		
+	if (petMe.settings.components.hideMap[1] == true) then
+		if ( string.match(menuName, 'map') or
+		     string.match(menuName, 'cnqframe')
+		   ) then
+			return true;
+		end
+	end
+
+	if (petMe.settings.components.hideLog[1] == true) then
+		if (string.match(menuName, 'fulllog')) then
+			return true;
+		end
+	end
+	
+	--Hide when at login screen
+    return menuName:match('menu%s+scanlist.*') ~= nil
 		or menuName:match('menu%s+dbnamese') ~= nil
 		or menuName:match('menu%s+ptc6yesn') ~= nil
+		--or menuName:match('menu%s+') ~= nil
+		
 end
 
 --------------------------------------------------------------------
@@ -352,10 +371,19 @@ function renderMenu()
 			imgui.Checkbox('Show pet target', petMe.settings.components.petTarget);
 			imgui.ShowHelp('Shows the pet\'s target / remaining HP percent.');
 
+			imgui.Checkbox('Hide window when map is open', petMe.settings.components.hideMap);
+			imgui.ShowHelp('Hides the PetMe window when the map is open.');
+
+			imgui.Checkbox('Hide window when log is open', petMe.settings.components.hideLog);
+			imgui.ShowHelp('Hides the PetMe window when the log is open.');
+			
 			imgui.Checkbox('Always Show Window', petMe.settings.components.alwaysVisible);
 			imgui.ShowHelp('Shows the PetMe window even when there is no pet.');
 
 		imgui.EndChild();
+
+		imgui.Checkbox('Use HorizonXI calculations', petMe.settings.useHorizonMerits);
+		imgui.ShowHelp('Use the HorizonXI method of calculating Ready charges (only matters if meritted).');
 
 		if (imgui.Button('  Save  ')) then
 			settings.save();
@@ -385,11 +413,6 @@ function renderPetMe(player, pet)
 
 	if (imgui.Begin('PetMe', true, bit.bor(ImGuiWindowFlags_NoDecoration))) then
 		imgui.SetWindowFontScale(petMe.settings.window.scale[1]);
-
---		local menuName = GetMenuName();
---		if menuBase ~= nil then
---			imgui.Text(GetMenuName());
---		end
 
 		if (pet == nil) then
 			imgui.Text("No pet");
@@ -445,7 +468,11 @@ function renderPetMe(player, pet)
 				local readyTimer, modifier = GetReadySicRecast();
 				if (readyTimer >= 0) then
 					if (isJugPet == true) then
-						local chargesRemaining = math.floor(((3*modifier) - readyTimer) / modifier)
+						if (petMe.settings.useHorizonMerits == true) then
+							modifier = modifier + (45 - modifier)/2; --Horizon modifies this by -6 for each merit, for a 3sec reduction in recast
+						end
+					
+						local chargesRemaining = math.floor(((3*modifier) - readyTimer) / modifier);
 						local nextCharge = readyTimer % modifier; --Horizon only?
 						imgui.Text("Ready: " .. chargesRemaining .. " (" .. tostring(nextCharge) .. "s)");
 					else
@@ -594,6 +621,7 @@ ashita.events.register('packet_out', 'packet_out_cb', function (e)
 		local actionId = struct.unpack('H', e.data, 0x0C + 0x01);
 
 		if (category == 0x09) then --Job Ability
+			--print(actionId); -- Action ID: Stay=73, Heel=70, Leave=71
 			if (petMe.mobInfo.hasPet == false) then --Check to make sure that the player doesn't already have a pet.
 				if (actionId == 52) then --Charm
 					petMe.mobInfo.charmingMob = true;
@@ -632,11 +660,13 @@ end);
 ashita.events.register('packet_in', 'packet_in_cb', function (e)
 
 	--Action (action 28, action msg 29)
-	--if (e.id == 0x028) then 
+	if (e.id == 0x028) then 
+		--print(e.id);
+		--print(e.data);
 		--Possibly use this to determine when call beast is used.
 		--Possibly get +chr/+charm & calculate charm duration here.
 		--print(e.size);
-	--end
+	end
 	--if (e.id == 0x050) then
 	--end
 
