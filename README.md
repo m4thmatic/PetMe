@@ -4,6 +4,7 @@ PetMe displays the following information:
 * Pet name, level, and distance
 * Charm duration
 * Ready / Sic and Reward recast timers
+* Healing tick counter (Stay)
 * Basic pet stats: HP/MP/TP
 * Pet Target
 
