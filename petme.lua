@@ -22,7 +22,7 @@
 addon.author   = 'MathMatic';
 addon.name     = 'PetMe';
 addon.desc     = 'Display BST pet information. Level, Charm Duration, Sic & Ready Charges, Reward Recast, Pet Target.';
-addon.version  = '1.1.0';
+addon.version  = '1.2.0';
 
 require ('common');
 local settings = require('settings');
@@ -45,12 +45,12 @@ local defaultConfig = T{
 		petRecasts		= T{true},
 		petStats		= T{true},
 		petTarget		= T{true},
+		petStayCounter  = T{true},
 		hideMap			= T{false},
 		hideLog			= T{false},
 		alwaysVisible	= T{false},
 	},
 
-	useHorizonMerits	= T{true},
 	charmGear 			= T{0},
 	charmUntil			= T{0}, -- store jug pet charm time, in case of shutdown
 }
@@ -67,6 +67,7 @@ local petMe = T{
 		charmUntil			= 0,
 		petTarget			= nil,
 		jugPetJustCalled 	= false;
+		petStayTicks		= 0;
 	},
 
 	configMenuOpen = false;
@@ -118,7 +119,7 @@ local jugPetList = { --NOTE: These are HorizonXI specific
     {petName="MiteFamiliar",    maxlevel=55, duration=60},
     {petName="KeenearedSteffi", maxlevel=75, duration=90},
     {petName="LullabyMelodia",  maxlevel=75, duration=60},
-    {petName="FlowerpotBill",   maxlevel=75, duration=60},
+    {petName="FlowerpotBen",    maxlevel=75, duration=60},
     {petName="SaberSiravarde",  maxlevel=75, duration=60},
     {petName="FunguarFamiliar", maxlevel=65, duration=60},
     {petName="ShellbusterOrob", maxlevel=75, duration=60},
@@ -232,25 +233,59 @@ end
 local AbilityRecastPointer = ashita.memory.find('FFXiMain.dll', 0, '894124E9????????8B46??6A006A00508BCEE8', 0x19, 0);
 AbilityRecastPointer = ashita.memory.read_uint32(AbilityRecastPointer);
 
-local function GetReadySicRecast()
-	--Ready/Sic == ability ID 103
-	local readyAbilityID = 102;
-
-	for i = 1,31 do
+local function GetAbilityTimerData(id)
+    for i = 1,31 do
         local compId = ashita.memory.read_uint8(AbilityRecastPointer + (i * 8) + 3);
-        if (compId == readyAbilityID) then
-            modifier = ashita.memory.read_int16(AbilityRecastPointer + (i * 8) + 4);
-            recast = ashita.memory.read_uint32(AbilityRecastPointer + (i * 4) + 0xF8);
+        if (compId == id) then
+            return {
+                Modifier = ashita.memory.read_int16(AbilityRecastPointer + (i * 8) + 4);
+                Recast = ashita.memory.read_uint32(AbilityRecastPointer + (i * 4) + 0xF8);
+            };
         end
     end
+    
+    return {
+        Modifier = 0,
+        Recast = 0
+    };
+end
 
-	if (recast == nil) then
-		return -1, -1;
+local function RecastToString(timer)
+    if (timer >= 216000) then
+        local h = math.floor(timer / (216000));
+        local m = math.floor(math.fmod(timer, 216000) / 3600);
+        return string.format('%i:%02i', h, m);
+    elseif (timer >= 3600) then
+        local m = math.floor(timer / 3600);
+        local s = math.floor(math.fmod(timer, 3600) / 60);
+        return string.format('%i:%02i', m, s);
+    else
+        if (timer < 60) then
+            return '1';
+        else
+            return string.format('%i', math.floor(timer / 60));
+        end
     end
+end
 
-	recast = math.floor(recast / 60);
 
-	return recast, modifier;
+local function GetReadySicRecast(isJugPet)
+	--Ready/Sic == ability ID 102
+	local data = GetAbilityTimerData(102);
+	
+	if (isJugPet == true) then
+		if (data.Recast == 0) then
+			return "Ready: 3 (0s)";
+		else
+			local baseRecast = 60 * (90 + data.Modifier);
+			local chargeValue = baseRecast / 3;
+			local remainingCharges = math.floor((baseRecast - data.Recast) / chargeValue);
+			local timeUntilNextCharge = math.fmod(data.Recast, chargeValue);
+			return "Ready: " .. remainingCharges .. " (" .. tostring(math.ceil(timeUntilNextCharge/60)) .. "s)";
+		end
+	else
+		return "Sic Recast: " .. tostring(math.ceil(data.Recast/60)) .. "s";
+	end
 end
 
 local function GetRewardRecast()
@@ -365,6 +400,9 @@ function renderMenu()
 			imgui.Checkbox('Show pet recast timers', petMe.settings.components.petRecasts);
 			imgui.ShowHelp('Shows ready/sic and reward recast timers.');
 
+			imgui.Checkbox('Show pet healing (stay) ticks', petMe.settings.components.petStayCounter);
+			imgui.ShowHelp('Shows an estimated countdown until the next time the pet will recover health when stayed.');
+
 			imgui.Checkbox('Show pet stats', petMe.settings.components.petStats);
 			imgui.ShowHelp('Shows the pet\'s HP, MP, and TP percentages.');
 
@@ -381,9 +419,6 @@ function renderMenu()
 			imgui.ShowHelp('Shows the PetMe window even when there is no pet.');
 
 		imgui.EndChild();
-
-		imgui.Checkbox('Use HorizonXI calculations', petMe.settings.useHorizonMerits);
-		imgui.ShowHelp('Use the HorizonXI method of calculating Ready charges (only matters if meritted).');
 
 		if (imgui.Button('  Save  ')) then
 			settings.save();
@@ -465,20 +500,7 @@ function renderPetMe(player, pet)
 			-- Display recasts
 			if (petMe.settings.components.petRecasts[1] == true) then
 				-- Display ready/sic recast
-				local readyTimer, modifier = GetReadySicRecast();
-				if (readyTimer >= 0) then
-					if (isJugPet == true) then
-						if (petMe.settings.useHorizonMerits == true) then
-							modifier = modifier + (45 - modifier)/2; --Horizon modifies this by -6 for each merit, for a 3sec reduction in recast
-						end
-					
-						local chargesRemaining = math.floor(((3*modifier) - readyTimer) / modifier);
-						local nextCharge = readyTimer % modifier; --Horizon only?
-						imgui.Text("Ready: " .. chargesRemaining .. " (" .. tostring(nextCharge) .. "s)");
-					else
-						imgui.Text("Sic Recast: " .. tostring(readyTimer) .. "s");
-					end
-				end
+				imgui.Text(GetReadySicRecast(isJugPet));
 
 				-- Display reward recast
 				local rewardTimer, modif = GetRewardRecast();
@@ -496,6 +518,22 @@ function renderPetMe(player, pet)
 			-- Display pet acc/att stats
 				--TBD
 
+			-- Display the healing (stay) tick count
+			if (petMe.settings.components.petStayCounter[1] == true) then
+				if (petMe.mobInfo.petStayTicks ~= 0) then
+					local petMovement = AshitaCore:GetMemoryManager():GetEntity():GetLocalMoveCount(player.PetTargetIndex);
+					if (petMovement ~= 0) then
+						petMe.mobInfo.petStayTicks = 0;
+					else
+						if (petMe.mobInfo.petStayTicks - os.time() <= 0) then
+							petMe.mobInfo.petStayTicks = os.time() + 10;
+						end				
+						local petTickCnt = tostring(petMe.mobInfo.petStayTicks - os.time());
+
+						imgui.Text("Healing count: " .. petTickCnt);
+					end			
+				end
+			end
 
 			-- Dislay pet stat bars (HPP,MPP,TP)
 			if (petMe.settings.components.petStats[1] == true) then
@@ -711,6 +749,22 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
 	
 		return;
 	end
+end);
+
+ashita.events.register('text_in', 'PetMe_HandleText', function (e)
+    if (e.injected == true) then
+        return;
+    end
+
+	local player = GetPlayerEntity();
+	if (player ~= nil) then
+		if (string.match(e.message, player.Name .. " uses Stay.")) then
+			if (petMe.mobInfo.petStayTicks == 0) then
+				petMe.mobInfo.petStayTicks = os.time() + 20;
+			end
+		end
+	end
+
 end);
 
 --------------------------------------------------------------------
