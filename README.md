@@ -23,13 +23,11 @@ the configuration menu can be brought up by typing in /petme or /pm.
 3)	I personally only play on the HorizonXI private server. This addon should work on retail / other private
 	servers, with a couple of caveats. In particular, the jug pet level/duration table will need to be updated w/
 	appropriate values & additional pets.
-	* Note: Horizon uses different values than ASB (and presumably retail) for Sic/Ready merits, so the number of Ready charges/countdown may be messed up.
 
 ## Planning to add:
 1) Automated calculation of +charm
 2) Take into account using ability Familiar (reset charm duration)
 3) Pet buffs / debuffs (this may not be feasible)
-4) Pet resting status (may not be feasible as well)
 
 ## Commands:
 ### /petme or /pm
