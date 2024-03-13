@@ -22,12 +22,13 @@
 addon.author   = 'MathMatic';
 addon.name     = 'PetMe';
 addon.desc     = 'Display BST pet information. Level, Charm Duration, Sic & Ready Charges, Reward Recast, Pet Target.';
-addon.version  = '1.2.0';
+addon.version  = '1.3.0';
 
 require ('common');
 local settings = require('settings');
 local imgui = require('imgui');
 local chat = require('chat');
+local charmedPet = require('petTypeCharmed');
 
 --------------------------------------------------------------------
 local defaultConfig = T{
@@ -46,12 +47,12 @@ local defaultConfig = T{
 		petStats		= T{true},
 		petTarget		= T{true},
 		petStayCounter  = T{true},
-		hideMap			= T{false},
+		hideMap			= T{true},
 		hideLog			= T{false},
 		alwaysVisible	= T{false},
 	},
 
-	charmGear 			= T{0},
+	--charmGear 			= T{0},
 	charmUntil			= T{0}, -- store jug pet charm time, in case of shutdown
 }
 
@@ -70,7 +71,7 @@ local petMe = T{
 		petStayTicks		= 0;
 	},
 
-	configMenuOpen = false;
+	configMenuOpen = {false};
 }
 
 ---------------------------Lookup Tables---------------------------
@@ -82,25 +83,6 @@ local colors = {
 	MpBar          = { 0.20, 0.20, 0.80, 1.0 },
 	TpBar          = { 0.40, 0.40, 0.40, 1.0 },
 	TargetBar      = { 0.70, 0.40, 0.40, 1.0 },
-}
-
-local dLevel = {
-	{ld = -6, chg = 0.04},
-	{ld = -5, chg = 0.08},
-	{ld = -4, chg = 0.12},
-	{ld = -3, chg = 0.16},
-	{ld = -2, chg = 0.33},
-	{ld = -1, chg = 0.66},
-	{ld =  0, chg = 1.00},
-	{ld =  1, chg = 1.40},
-	{ld =  2, chg = 1.80},
-	{ld =  3, chg = 2.20},
-	{ld =  4, chg = 2.60},
-	{ld =  5, chg = 3.00},
-	{ld =  6, chg = 3.40},
-	{ld =  7, chg = 4.00},
-	{ld =  8, chg = 5.00},
-	{ld =  9, chg = 6.00},
 }
 
 local jugPetList = { --NOTE: These are HorizonXI specific
@@ -133,39 +115,6 @@ local jugPetList = { --NOTE: These are HorizonXI specific
     {petName="ChopsueyChucky",  maxlevel=75, duration=60},
     {petName="AmigoSabotender", maxlevel=75, duration=30},
 }
-
---------------------------------------------------------------------
-function calculateCharmTime()
-	-- Set base values
-	local playerLvl = AshitaCore:GetMemoryManager():GetPlayer():GetMainJobLevel();
-	local baseChr   = AshitaCore:GetMemoryManager():GetPlayer():GetStat(6);
-	--local charm     = 0;
-	--local staff		= 0;
-
-	-- calculate level difference between player & pet
-	local levelDifference = playerLvl - petMe.mobInfo.mobLevel;
-	if (levelDifference < -6) then
-		levelDifference = -6;
-	elseif (levelDifference > 9) then
-		levelDifference = 9;
-	end
-
-	-- determine the level modifier
-	local lvlModifier = 0;
-	for _,item in ipairs(dLevel) do
-		if item.ld == levelDifference then
-			lvlModifier = item.chg;
-		end
-	end
-
-	--Base Charm Duration (seconds) = floor(1.25 × CHR + 150 )
-	local baseCharmDuration = math.floor(1.25 * baseChr + 150);
-	--Pre-Gear Charm Duration = Base Charm Duration × % Change
-	local preGearDuration = baseCharmDuration * lvlModifier;
-	--Charm Duration = Pre-gear Charm Duration × ( 1 + 0.05×(Charm+ in gear) )
-	local charmDuration = preGearDuration * (1 + (0.05 * petMe.settings.charmGear[1]));
-	petMe.mobInfo.charmUntil = os.time() + charmDuration;
-end
 
 --------------------------------------------------------------------
 function checkIsJugPet(petName)
@@ -369,68 +318,60 @@ end
 function renderMenu()
 
 	imgui.SetNextWindowSize({500});
-	--imgui.PushStyleColor(ImGuiCol_WindowBg, defaultConfig.window.backgroundColor);
-	--imgui.PushStyleColor(ImGuiCol_Border, defaultConfig.window.borderColor);
-	--imgui.PushStyleColor(ImGuiCol_Text, defaultConfig.window.textColor);
-	if (imgui.Begin('PetMe Configuration Menu', true, bit.bor(ImGuiWindowFlags_NoSavedSettings))) then
-		imgui.Text("+charm on gear")
-        imgui.InputInt('', petMe.settings.charmGear);
-        imgui.ShowHelp('Set how much +charm is used when charming a mob.');
 
-		imgui.Separator();
+	if (imgui.Begin(string.format('%s v%s Configuration', addon.name, addon.version), petMe.configMenuOpen, bit.bor(ImGuiWindowFlags_AlwaysAutoResize))) then
 
 		imgui.Text("Display Options");
-		imgui.BeginChild('display_settings', { 0, 300, }, true);
-			imgui.SliderFloat('Window Scale', petMe.settings.window.scale, 0.1, 2.0, '%.2f');
-			imgui.ShowHelp('Scale the window bigger/smaller.');
 
-			imgui.SliderFloat('Window Opacity', petMe.settings.window.opacity, 0.1, 1.0, '%.2f');
-			imgui.ShowHelp('Set the window opacity.');
+		imgui.SliderFloat('Window Scale', petMe.settings.window.scale, 0.1, 2.0, '%.2f');
+		imgui.ShowHelp('Scale the window bigger/smaller.');
 
-			imgui.ColorEdit4("Text Color", petMe.settings.window.textColor);
-			imgui.ColorEdit4("Border Color", petMe.settings.window.borderColor);
-			imgui.ColorEdit4("Background Color", petMe.settings.window.backgroundColor);
+		imgui.SliderFloat('Window Opacity', petMe.settings.window.opacity, 0.1, 1.0, '%.2f');
+		imgui.ShowHelp('Set the window opacity.');
 
-			imgui.Checkbox('Show basic info', petMe.settings.components.petName);
-			imgui.ShowHelp('Shows the pet name, level, and distance.');
+		imgui.ColorEdit4("Text Color", petMe.settings.window.textColor);
+		imgui.ColorEdit4("Border Color", petMe.settings.window.borderColor);
+		imgui.ColorEdit4("Background Color", petMe.settings.window.backgroundColor);
 
-			imgui.Checkbox('Show duration', petMe.settings.components.petDuration);
-			imgui.ShowHelp('Shows the pet duration.');
+		imgui.Checkbox('Show basic info', petMe.settings.components.petName);
+		imgui.ShowHelp('Shows the pet name, level, and distance.');
 
-			imgui.Checkbox('Show pet recast timers', petMe.settings.components.petRecasts);
-			imgui.ShowHelp('Shows ready/sic and reward recast timers.');
+		imgui.Checkbox('Show duration', petMe.settings.components.petDuration);
+		imgui.ShowHelp('Shows the pet duration.');
 
-			imgui.Checkbox('Show pet healing (stay) ticks', petMe.settings.components.petStayCounter);
-			imgui.ShowHelp('Shows an estimated countdown until the next time the pet will recover health when stayed.');
+		imgui.Checkbox('Show pet recast timers', petMe.settings.components.petRecasts);
+		imgui.ShowHelp('Shows ready/sic and reward recast timers.');
 
-			imgui.Checkbox('Show pet stats', petMe.settings.components.petStats);
-			imgui.ShowHelp('Shows the pet\'s HP, MP, and TP percentages.');
+		imgui.Checkbox('Show pet healing (stay) ticks', petMe.settings.components.petStayCounter);
+		imgui.ShowHelp('Shows an estimated countdown until the next time the pet will recover health when stayed.');
 
-			imgui.Checkbox('Show pet target', petMe.settings.components.petTarget);
-			imgui.ShowHelp('Shows the pet\'s target / remaining HP percent.');
+		imgui.Checkbox('Show pet stats', petMe.settings.components.petStats);
+		imgui.ShowHelp('Shows the pet\'s HP, MP, and TP percentages.');
 
-			imgui.Checkbox('Hide window when map is open', petMe.settings.components.hideMap);
-			imgui.ShowHelp('Hides the PetMe window when the map is open.');
+		imgui.Checkbox('Show pet target', petMe.settings.components.petTarget);
+		imgui.ShowHelp('Shows the pet\'s target / remaining HP percent.');
 
-			imgui.Checkbox('Hide window when log is open', petMe.settings.components.hideLog);
-			imgui.ShowHelp('Hides the PetMe window when the log is open.');
+		imgui.Checkbox('Hide window when map is open', petMe.settings.components.hideMap);
+		imgui.ShowHelp('Hides the PetMe window when the map is open.');
+
+		imgui.Checkbox('Hide window when log is open', petMe.settings.components.hideLog);
+		imgui.ShowHelp('Hides the PetMe window when the log is open.');
 			
-			imgui.Checkbox('Always Show Window', petMe.settings.components.alwaysVisible);
-			imgui.ShowHelp('Shows the PetMe window even when there is no pet.');
+		imgui.Checkbox('Always Show Window', petMe.settings.components.alwaysVisible);
+		imgui.ShowHelp('Shows the PetMe window even when there is no pet.');
 
-		imgui.EndChild();
-
-		if (imgui.Button('  Save  ')) then
-			settings.save();
-			petMe.configMenuOpen = false;
-            print(chat.header(addon.name):append(chat.message('Settings saved.')));
-		end
-		imgui.SameLine();
+		--if (imgui.Button('  Save  ')) then
+		--	settings.save();
+		--	petMe.configMenuOpen[1] = false;
+        --    print(chat.header(addon.name):append(chat.message('Settings saved.')));
+		--end
+		--imgui.SameLine();
 		if (imgui.Button('  Reset  ')) then
 			--settings = defaultConfig;
 			settings.reset();
             print(chat.header(addon.name):append(chat.message('Settings reset to default.')));
 		end
+		imgui.ShowHelp('Resets settings to their default state.');
 	end
     --imgui.PopStyleColor(3);
 	imgui.End();
@@ -637,7 +578,7 @@ ashita.events.register('command', 'command_cb', function (e)
     e.blocked = true;
 
 	if (#args == 1) then
-		petMe.configMenuOpen = not petMe.configMenuOpen;
+		petMe.configMenuOpen[1] = not petMe.configMenuOpen[1];
 	end
 end);
 
@@ -689,6 +630,15 @@ ashita.events.register('packet_out', 'packet_out_cb', function (e)
 					--calculateJugPetTime(); -- Can't call this here directly, b/c pet doesn't exist yet
 					petMe.mobInfo.jugPetJustCalled = true; -- set flag and calculate time later
 				end
+			else
+				if (actionId == 73) then --Stay
+					if (petMe.mobInfo.petStayTicks == 0) then
+						petMe.mobInfo.petStayTicks = os.time() + 20;
+					end
+				end
+				if (actionId == 70) then --Heel
+					petMe.mobInfo.petStayTicks = 0;
+				end
 			end
 		end
 	end
@@ -726,7 +676,7 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
 			if (petMe.mobInfo.charmingMob == true) then
 				e.blocked = true; --prevent console check text, though other addons (i.e. "checker") will still pick it up and print to console
 				petMe.mobInfo.mobLevel = param1;
-				calculateCharmTime();
+				petMe.mobInfo.charmUntil = charmedPet.calculateCharmTime(param1);
 				petMe.mobInfo.charmingMob = false;
 			end
 		end
@@ -751,21 +701,6 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
 	end
 end);
 
-ashita.events.register('text_in', 'PetMe_HandleText', function (e)
-    if (e.injected == true) then
-        return;
-    end
-
-	local player = GetPlayerEntity();
-	if (player ~= nil) then
-		if (string.match(e.message, player.Name .. " uses Stay.")) then
-			if (petMe.mobInfo.petStayTicks == 0) then
-				petMe.mobInfo.petStayTicks = os.time() + 20;
-			end
-		end
-	end
-
-end);
 
 --------------------------------------------------------------------
 --[[
@@ -779,7 +714,7 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 			return;
 		end
 
-		if (petMe.configMenuOpen == true) then
+		if (petMe.configMenuOpen[1] == true) then
 			renderMenu();
 		end
 		

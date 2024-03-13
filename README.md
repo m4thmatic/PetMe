@@ -1,18 +1,33 @@
 # PetMe
-Addon for FFXI / AshitaXI v4 that displays BST pet information (for both charmed & jug pets). As of the moment
+Addon for FFXI / AshitaXI v4 that displays detailed pet information. As of the moment
 PetMe displays the following information:
-* Pet name, level, and distance
-* Charm duration
-* Ready / Sic and Reward recast timers
-* Healing tick counter (Stay)
+
+All Jobs:
+* Pet name and distance
 * Basic pet stats: HP/MP/TP
 * Pet Target
+
+BST:
+* Charm & Jug duration
+* Pet Level
+* Ready / Sic and Reward recast timers
+* Healing tick counter (Stay)
+
+DRG:
+* Soon(tm)
+
+SMN:
+* Soon(tm)
 
 ![PetMe: Charmed pet](images/wsic.png "Charmed pet")
 ![PetMe: Jug pet](images/jug.png "Jug pet")
 
 The PetMe information displayed is largely configurable. After loading (by typing in "/addon load petme" - w/o quotes)
 the configuration menu can be brought up by typing in /petme or /pm.
+
+## Install:
+To install, grab the latest release (a.k.a. stable version) from [Releases](https://github.com/m4thmatic/PetMe/releases).
+Unzip and drop the contents (the "petme" folder) into your *Game > addons* folder.
 
 ## Notes:
 1)	PetMe must already be loaded during a charm/call beast action to get the pet level & duration (this information is
