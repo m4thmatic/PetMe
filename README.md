@@ -13,11 +13,7 @@ BST:
 * Ready / Sic and Reward recast timers
 * Healing tick counter (Stay)
 
-DRG:
-* Soon(tm)
-
-SMN:
-* Soon(tm)
+DRG & SMN coming soon. :tm:
 
 ![PetMe: Charmed pet](images/wsic.png "Charmed pet")
 ![PetMe: Jug pet](images/jug.png "Jug pet")
