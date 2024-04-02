@@ -1,3 +1,8 @@
+local settings = require('settings');
+local gConfig = require('config');
+local imgui = require('imgui');
+local gFunctions = require('helper');
+
 local Charm = T{};
 
 local charmGear = T{
@@ -67,7 +72,6 @@ local dLevel = {
 }
 
 
---Charm.getCharmEquipValue = function (args)
 function getCharmEquipValue()
     local charmValue = 0;
 
@@ -86,6 +90,13 @@ function getCharmEquipValue()
     return charmValue;
 end
 
+function GetSicRecast()
+	--Ready/Sic == ability ID 102
+	local data = gFunctions.GetAbilityTimerData(102);
+    
+    return math.ceil(data.Recast/60);
+
+end
 
 --------------------------------------------------------------------
 --function calculateCharmTime()
@@ -121,7 +132,75 @@ Charm.calculateCharmTime = function (mobLevel)
 	return os.time() + charmDuration;
 end
 
+Charm.gui = function()
+    local player = GetPlayerEntity();
+    local pet = GetEntity(player.PetTargetIndex);
 
+	-- Display pet name / level / distance
+	local dist  = ('%.1f'):fmt(math.sqrt(pet.Distance));
+	local x, _  = imgui.CalcTextSize(dist);
+	if (gConfig.params.settings.components.petName[1] == true) then
+		if (gConfig.params.mobInfo.mobLevel > 0) then
+			local petLvl = gConfig.params.mobInfo.mobLevel;
+			imgui.Text(pet.Name .. " (Lvl " .. tostring(petLvl) .. ")");
+		else
+			imgui.Text(pet.Name .. " (Lvl ---)");
+		end
+		imgui.SameLine();
+		imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.GetColumnWidth() - x - imgui.GetStyle().FramePadding.x);
+		imgui.Text(dist .. "m");
+	end
+
+	-- Display pet duration
+	if (gConfig.params.settings.components.petDuration[1] == true) then
+		if (gConfig.params.mobInfo.charmUntil ~= 0) then
+			local duration = math.floor(gConfig.params.mobInfo.charmUntil - os.time());
+			local hrs = math.floor(duration / 3600);
+			local mins = math.floor((duration % 3600) / 60);
+			local secs = duration % 60;
+
+            imgui.Text(string.format("Pet Duration: %01d:%02d:%02d", hrs, mins, secs));
+		else
+			imgui.Text("Pet Duration: (Unknown)");
+		end
+	end
+
+	-- Display recasts
+	if (gConfig.params.settings.components.petRecasts[1] == true) then
+		-- Display sic recast
+		imgui.Text("Sic Recast: " .. tostring(GetSicRecast()) .. "s");
+
+		-- Display reward recast
+		local rewardTimer, modif = gFunctions.GetRewardRecast();
+			imgui.SameLine();
+			local reMins = math.floor(rewardTimer / 60);
+			local reSecs = rewardTimer % 60;
+			rewText = string.format("Reward: %ds", rewardTimer);
+			imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.GetColumnWidth() - imgui.CalcTextSize(rewText));
+			imgui.Text(rewText);
+	end
+
+			-- Display pet acc/att stats
+				--TBD
+
+	-- Display the healing (stay) tick count
+	if (gConfig.params.settings.components.petStayCounter[1] == true) then
+		if (gConfig.params.mobInfo.bstPet.stayTicks ~= 0) then
+			local petMovement = AshitaCore:GetMemoryManager():GetEntity():GetLocalMoveCount(player.PetTargetIndex);
+			if ((petMovement ~= 0) and (gConfig.params.mobInfo.bstPet.stayTicks - os.time() < 19)) then --if pet moves, and it's been > 1second since staying (allow time for pet to stop)
+				gConfig.params.mobInfo.bstPet.stayTicks = 0;											--cancel stay
+			else
+				if (gConfig.params.mobInfo.bstPet.stayTicks - os.time() <= 0) then
+					gConfig.params.mobInfo.bstPet.stayTicks = os.time() + 10;
+				end				
+				local petTickCnt = tostring(gConfig.params.mobInfo.bstPet.stayTicks - os.time());
+
+				imgui.Text("Healing count: " .. petTickCnt);
+			end			
+		end
+	end
+
+end
 
 
 
