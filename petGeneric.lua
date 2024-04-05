@@ -47,7 +47,6 @@ gPet.targetBar = function(pet)
     local target = gFunctions.GetEntityByServerId(gConfig.params.mobInfo.petTarget);
     if (target == nil or target.ActorPointer == 0 or target.HPPercent == 0) then
         gConfig.params.mobInfo.petTarget = nil;
-        imgui.Text("No target")
     else
         dist = ('%.1f'):fmt(math.sqrt(target.Distance));
         x, _ = imgui.CalcTextSize(dist);

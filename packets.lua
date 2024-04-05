@@ -3,12 +3,6 @@ local gConfig = require('config');
 local charmedPet = require('petBSTCharm');
 local jugPet = require('petBSTJug');
 
-------------------------------VARS----------------------------------
-local gPackets = T{};
-local charmCheck = false;
-local charmTarget = nil;
-local charmTargetIdx = nil;
-
 ------------------------------ENUMS---------------------------------
 local outPacket = T{
     ACTION      = 0x001A,
@@ -37,14 +31,26 @@ local actionPacketAbilityID = T{
     BST_LOYALTY = 0x183,
 }
 
+local charmStates = T{
+    CHARM_NONE          = 0,
+    CHARM_SENDING_PCK   = 1,
+    CHARM_CHECK_PCK     = 2,
+}
+
 local outPacketActionCategory = T{
     JOB_ABILITY = 0x09,
 }
 
+------------------------------VARS----------------------------------
+local gPackets = T{};
+local charmState = charmStates.CHARM_NONE;
+local charmTarget = nil;
+local charmTargetIdx = nil;
+
 --------------------------------------------------------------------
 gPackets.packet_out_cb = function (e)
 	if(e.id == outPacket.CHECK) then --Outgoing "check" packet
-		if (charmCheck == true) then
+		if (charmState == charmStates.CHARM_SENDING_PCK) then
 			--Modify packet to use the charm target instead of whatever the player is actually targetting
 			pktdata = e.data:totable();
             --Packet structure: https://github.com/Windower/Lua/blob/dev/addons/libs/packets/fields.lua, line 954
@@ -53,6 +59,7 @@ gPackets.packet_out_cb = function (e)
                                                        pktdata[11], pktdata[12], pktdata[13], pktdata[14],
                                                        pktdata[15], pktdata[16]);
 			e.data_modified = pckt;
+            charmState = charmStates.CHARM_CHECK_PCK;
 		end
 	end
 
@@ -67,9 +74,12 @@ gPackets.packet_out_cb = function (e)
 		--print("Category: " .. string.format("0x%x", category) .. " -- Action ID: " .. string.format("0x%x", actionId));
 
 		if (category == outPacketActionCategory.JOB_ABILITY) then --Job Ability
-			if (gConfig.params.mobInfo.petType == gConfig.NONE) then --Check to make sure that the player doesn't already have a pet.
+			if (gConfig.params.mobInfo.petType == gConfig.petType.NONE) then --Check to make sure that the player doesn't already have a pet.
 				if (actionId == actionPacketAbilityID.CHARM) then --Charm
 					--e.blocked = true; --Stop the charm packet from being sent, for debugging
+
+                    --Set state to sent
+                    charmState = charmStates.CHARM_SENDING_PCK;
 
 					-- Because players may use different targetting mechanisms, store the target/index of the mob that
 					-- the player is attempting to charm. This can then be used to modify the /check command upon receipt.
@@ -80,7 +90,6 @@ gPackets.packet_out_cb = function (e)
 
 					--Send a check command prior to charming to get the mob level & set flag
 					AshitaCore:GetChatManager():QueueCommand(1, "/check");
-                    charmCheck = true;
 				end
 			end
 		end
@@ -101,11 +110,11 @@ gPackets.packet_in_cb = function (e)
 		local msg    = struct.unpack('H', e.data, 0x18 + 0x01);
         -- If this is a Check packet AND we are attempting to charm a mob
 		if ( ((msg >= 0xAA) and (msg <= 0xB2)) or ((param2 >= 0x40) and (param2 <= 0x47))) then -- msg == 0xF9  (impossible to gauge, not relevant)
-			if (charmCheck == true) then
+			if (charmState == charmStates.CHARM_CHECK_PCK) then
 				e.blocked = true; --prevent console check text, though other addons (i.e. "checker") will still pick it up and print to console
 				gConfig.params.mobInfo.mobLevel = param1;
 				gConfig.params.mobInfo.charmUntil = charmedPet.calculateCharmTime(param1);
-				charmCheck = false;
+				charmState = charmStates.CHARM_NONE;
 			end
 		end
     elseif (e.id == inPacket.ACTION) then --Incomming action packet
@@ -129,7 +138,7 @@ gPackets.packet_in_cb = function (e)
             elseif (abilityID == actionPacketAbilityID.HEEL) then --Heel
                 gConfig.params.mobInfo.bstPet.stayTicks = 0; --Reset the stay counter
             elseif (abilityID == actionPacketAbilityID.LEAVE) then --Heel
-                gConfig.params.mobInfo.petType = gConfig.NONE;
+                gConfig.params.mobInfo.petType = gConfig.petType.NONE;
                 gConfig.params.mobInfo.bstPet.stayTicks = 0; --Reset the stay counter
                 --jugPet.newJug(); --
             end

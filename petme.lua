@@ -105,7 +105,7 @@ ashita.events.register('d3d_present', 'd3d_present_cb', function ()
 		
 		local pet = GetEntity(player.PetTargetIndex);
 		if (pet == nil) then -- if no pet, set pet to false & return
-			gConfig.params.mobInfo.hasPet = false;
+			gConfig.params.mobInfo.petType = gConfig.petType.NONE;
 		end
 
 		if ((pet ~= nil) or (gConfig.params.settings.components.alwaysVisible[1] == true)) then
