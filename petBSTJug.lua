@@ -5,7 +5,7 @@ local gConfig = require('config');
 local imgui = require('imgui');
 local gFunctions = require('helper');
 
-Jug.jugPetList = { --NOTE: These are HorizonXI specific
+local jugPetList = { --NOTE: These are HorizonXI specific
     --Name, Max Level, Duration (minutes)
     {petName="HareFamiliar",    maxlevel=35, duration=90},
     {petName="SheepFamiliar",   maxlevel=35, duration=60},
@@ -50,6 +50,7 @@ Jug.newJug = function()
     newJug = true;
 end
 
+--------------------------------------------------------------------
 function GetReadyRecast()
 	--Ready/Sic == ability ID 102
 	local data = gFunctions.GetAbilityTimerData(102);
@@ -70,7 +71,7 @@ Jug.calculateJugPetTime = function(petName)
 	local duration = 0;
 
 	if (petName ~= nil) then
-		for _,entry in ipairs(Jug.jugPetList) do
+		for _,entry in ipairs(jugPetList) do
 			if (string.match(entry.petName, petName) ~= nil) then
 				duration = entry.duration;
 				break;
@@ -93,7 +94,7 @@ Jug.getJugLevel = function(petName)
 	--local petLevel = "?";
 	local petLevel = playerLvl;
 
-	for _,entry in ipairs(Jug.jugPetList) do
+	for _,entry in ipairs(jugPetList) do
         if (string.match(entry.petName, petName) ~= nil) then
 			if (playerLvl >= entry.maxlevel) then
             	petLevel = entry.maxlevel;
@@ -114,6 +115,19 @@ Jug.getJugLevel = function(petName)
 	return petLevel;
 end
 
+
+--------------------------------------------------------------------
+Jug.checkIsJugPet = function(petName)
+    for _,entry in ipairs(jugPetList) do
+        if (string.match(entry.petName, petName) ~= nil) then
+            return true;
+        end
+    end
+
+	return false;
+end
+
+--------------------------------------------------------------------
 Jug.gui = function()
     local player = GetPlayerEntity();
     local pet = GetEntity(player.PetTargetIndex);

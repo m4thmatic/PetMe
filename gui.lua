@@ -7,6 +7,8 @@ local gFunctions = require('helper');
 local genPet = require("petGeneric");
 local jugPet = require("petBSTJug");
 local charmPet = require("petBSTCharm");
+local smnPet = require("petSMN");
+local drgPet = require("petDRG");
 
 --------------------------------------------------------------------
 gui.renderMenu = function()
@@ -91,12 +93,24 @@ gui.renderMainWindow = function()
 			imgui.Text("No pet");
 		else
 			-- Display job specific pet info
-			if (gConfig.params.mobInfo.petType == nil) then
-				imgui.Text(pet.Name .. " (Unknown Pet Type)");
+			if (gConfig.params.mobInfo.petType == gConfig.petType.NONE or gConfig.params.mobInfo.petType == nil) then --If pet type is set to NONE, but pet exists, try and determine type
+				if (jugPet.checkIsJugPet(pet.Name) == true) then
+					gConfig.params.mobInfo.petType = gConfig.petType.JUG;
+				elseif (smnPet.checkIsSummon(pet.Name) == true) then
+					gConfig.params.mobInfo.petType = gConfig.petType.SUMMON;
+				elseif (drgPet.checkIsDragon(pet.Name) == true) then
+					gConfig.params.mobInfo.petType = gConfig.petType.DRAGON;
+				end
 			elseif (gConfig.params.mobInfo.petType == gConfig.petType.CHARMED) then
 				charmPet.gui();
 			elseif (gConfig.params.mobInfo.petType == gConfig.petType.JUG) then
 				jugPet.gui();
+			elseif (gConfig.params.mobInfo.petType == gConfig.petType.SUMMON) then
+
+			elseif (gConfig.params.mobInfo.petType == gConfig.petType.DRAGON) then
+				drgPet.gui();
+			else --This should not happen
+				imgui.Text(pet.Name .. " (Unknown Pet Type: " .. gConfig.params.mobInfo.petType .. ")");
 			end
 
 			-- Dislay pet stat bars (HPP,MPP,TP)
