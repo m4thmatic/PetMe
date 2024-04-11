@@ -21,7 +21,6 @@ local dragonList = {
 
 --------------------------------------------------------------------
 Drg.checkIsDragon = function(petName)
-    print(petName)
     for _,entry in ipairs(dragonList) do
         if (string.match(entry, petName) ~= nil) then
             return true;

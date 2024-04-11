@@ -61,6 +61,8 @@ gPackets.packet_out_cb = function (e)
 			e.data_modified = pckt;
             charmState = charmStates.CHARM_CHECK_PCK;
 		end
+        --pktdata = e.data:totable();
+        --print(pktdata[13]); --This is the /checkparam flag (0 for normal check, 2 for checkparam)
 	end
 
 	if (e.id == outPacket.ACTION) then --Outgoing action packet
@@ -96,9 +98,6 @@ gPackets.packet_out_cb = function (e)
 	end
 end
 
-function testTimer(val)
-    print(testTimer, os.time() .. ":: " .. val);
-end
 --------------------------------------------------------------------
 --ashita.events.register('packet_in', 'packet_in_cb', function (e)
 gPackets.packet_in_cb = function (e)
@@ -109,13 +108,13 @@ gPackets.packet_in_cb = function (e)
         local param2 = struct.unpack('L', e.data, 0x10 + 0x01);
 		local msg    = struct.unpack('H', e.data, 0x18 + 0x01);
         -- If this is a Check packet AND we are attempting to charm a mob
-		if ( ((msg >= 0xAA) and (msg <= 0xB2)) or ((param2 >= 0x40) and (param2 <= 0x47))) then -- msg == 0xF9  (impossible to gauge, not relevant)
-			if (charmState == charmStates.CHARM_CHECK_PCK) then
+        if (charmState == charmStates.CHARM_CHECK_PCK) then
+            if ( ((msg >= 0xAA) and (msg <= 0xB2)) or ((param2 >= 0x40) and (param2 <= 0x47))) then -- msg == 0xF9  (impossible to gauge, not relevant)
 				e.blocked = true; --prevent console check text, though other addons (i.e. "checker") will still pick it up and print to console
 				gConfig.params.mobInfo.mobLevel = param1;
 				gConfig.params.mobInfo.charmUntil = charmedPet.calculateCharmTime(param1);
-				charmState = charmStates.CHARM_NONE;
 			end
+            charmState = charmStates.CHARM_NONE;
 		end
     elseif (e.id == inPacket.ACTION) then --Incomming action packet
         --Packet structure: https://github.com/Windower/Lua/blob/dev/addons/libs/packets/fields.lua, line 1816
@@ -124,7 +123,7 @@ gPackets.packet_in_cb = function (e)
 
         --For debugging
         --print("Ability ID: " .. string.format("0x%x", abilityID) .. " -- pidx: " .. playerIdx .. " -- act: " .. actor);
-
+ 
         if (actor == AshitaCore:GetMemoryManager():GetParty():GetMemberServerId(0)) then
             if (abilityID == actionPacketAbilityID.CHARM) then
                 gConfig.params.mobInfo.petType = gConfig.petType.CHARMED;

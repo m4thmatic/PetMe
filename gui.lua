@@ -100,6 +100,8 @@ gui.renderMainWindow = function()
 					gConfig.params.mobInfo.petType = gConfig.petType.SUMMON;
 				elseif (drgPet.checkIsDragon(pet.Name) == true) then
 					gConfig.params.mobInfo.petType = gConfig.petType.DRAGON;
+				else
+					gConfig.params.mobInfo.petType = gConfig.petType.CHARMED; --Assumed
 				end
 			elseif (gConfig.params.mobInfo.petType == gConfig.petType.CHARMED) then
 				charmPet.gui();
