@@ -22,7 +22,7 @@
 addon.author   = 'MathMatic';
 addon.name     = 'PetMe';
 addon.desc     = 'Displays detailed pet information.';
-addon.version  = '2.0.3';
+addon.version  = '2.0.4';
 
 require ('common');
 local gPackets = require('packets');
@@ -112,4 +112,20 @@ ashita.events.register('d3d_present', 'd3d_present_cb', function ()
 			gGui.renderMainWindow();
 		end
 	end
+end);
+
+--------------------------------------------------------------------
+ashita.events.register('text_in', 'text_in_cb', function (e)
+    if (e.injected == true) then
+        return;
+    end
+
+	--if (e.mode == 191) then
+	--	if (string.match(e.message, "Primary Accuracy:")) then
+	--		print (string.match(e.message, "%d+"));
+	--	end
+	--end
+
+	--print(e.mode);
+	--print(" > " .. e.message);
 end);

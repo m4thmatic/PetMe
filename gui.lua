@@ -108,7 +108,7 @@ gui.renderMainWindow = function()
 			elseif (gConfig.params.mobInfo.petType == gConfig.petType.JUG) then
 				jugPet.gui();
 			elseif (gConfig.params.mobInfo.petType == gConfig.petType.SUMMON) then
-
+				smnPet.gui();
 			elseif (gConfig.params.mobInfo.petType == gConfig.petType.DRAGON) then
 				drgPet.gui();
 			else --This should not happen

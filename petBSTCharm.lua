@@ -91,7 +91,7 @@ function getCharmEquipValue()
 end
 
 function GetSicRecast()
-	--Ready/Sic == ability ID 102
+	--Sic == ability recast ID 102
 	local data = gFunctions.GetAbilityTimerData(102);
     
     return math.ceil(data.Recast/60);
@@ -199,6 +199,7 @@ Charm.gui = function()
 			end			
 		end
 	end
+
 
 end
 

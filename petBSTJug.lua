@@ -52,7 +52,7 @@ end
 
 --------------------------------------------------------------------
 function GetReadyRecast()
-	--Ready/Sic == ability ID 102
+	--Ready == ability recast ID 102
 	local data = gFunctions.GetAbilityTimerData(102);
 	
 	--if (data.Recast == 0) then
