@@ -36,10 +36,10 @@ Drg.gui = function()
     local pet = GetEntity(player.PetTargetIndex);
 
 	-- Display pet name / level / distance
-	local dist  = ('%.1f'):fmt(math.sqrt(pet.Distance));
-	local x, _  = imgui.CalcTextSize(dist);
-	if (gConfig.params.settings.components.petName[1] == true) then
-		imgui.Text(pet.Name);
+	if (gConfig.params.settings.components.petName[1] == true and pet ~= nil) then
+        local dist  = ('%.1f'):fmt(math.sqrt(pet.Distance));
+        local x, _  = imgui.CalcTextSize(dist);
+        imgui.Text(pet.Name);
 		imgui.SameLine();
 		imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.GetColumnWidth() - x - imgui.GetStyle().FramePadding.x);
 		imgui.Text(dist .. "m");

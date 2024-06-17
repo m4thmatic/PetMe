@@ -48,6 +48,7 @@ gConfig.params = T{
 
 	mobInfo = T{
 		petType             = NONE,
+		lastPetType			= NONE,
 		mobLevel 			= 0,
 		charmingMob 		= false,
 		charmMobTarget 		= 0,

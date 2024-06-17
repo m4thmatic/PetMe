@@ -72,7 +72,20 @@ gui.renderMenu = function()
 	imgui.End();
 end
 
-
+--------------------------------------------------------------------
+function petSpecificGui(petType)
+	if (petType == gConfig.petType.CHARMED) then
+		charmPet.gui();
+	elseif (petType == gConfig.petType.JUG) then
+		jugPet.gui();
+	elseif (petType == gConfig.petType.SUMMON) then
+		smnPet.gui();
+	elseif (petType == gConfig.petType.DRAGON) then
+		drgPet.gui();
+	else --This should not happen
+		imgui.Text(pet.Name .. " (Unknown Pet Type: " .. petType .. ")");
+	end
+end
 
 --------------------------------------------------------------------
 gui.renderMainWindow = function()
@@ -90,7 +103,10 @@ gui.renderMainWindow = function()
 		imgui.SetWindowFontScale(gConfig.params.settings.window.scale[1]);
 
 		if (pet == nil) then
-			imgui.Text("No pet");
+			imgui.Text("No active pet");
+			if (gConfig.params.mobInfo.lastPetType ~= gConfig.petType.NONE and gConfig.params.mobInfo.lastPetType ~= nil) then
+				petSpecificGui(gConfig.params.mobInfo.lastPetType);
+			end
 		else
 			-- Display job specific pet info
 			if (gConfig.params.mobInfo.petType == gConfig.petType.NONE or gConfig.params.mobInfo.petType == nil) then --If pet type is set to NONE, but pet exists, try and determine type
@@ -103,17 +119,11 @@ gui.renderMainWindow = function()
 				else
 					gConfig.params.mobInfo.petType = gConfig.petType.CHARMED; --Assumed
 				end
-			elseif (gConfig.params.mobInfo.petType == gConfig.petType.CHARMED) then
-				charmPet.gui();
-			elseif (gConfig.params.mobInfo.petType == gConfig.petType.JUG) then
-				jugPet.gui();
-			elseif (gConfig.params.mobInfo.petType == gConfig.petType.SUMMON) then
-				smnPet.gui();
-			elseif (gConfig.params.mobInfo.petType == gConfig.petType.DRAGON) then
-				drgPet.gui();
-			else --This should not happen
-				imgui.Text(pet.Name .. " (Unknown Pet Type: " .. gConfig.params.mobInfo.petType .. ")");
+			else
+				petSpecificGui(gConfig.params.mobInfo.petType);
 			end
+
+			gConfig.params.mobInfo.lastPetType = gConfig.params.mobInfo.petType;
 
 			-- Dislay pet stat bars (HPP,MPP,TP)
 			if (gConfig.params.settings.components.petStats[1] == true) then

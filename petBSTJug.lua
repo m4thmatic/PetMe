@@ -137,9 +137,9 @@ Jug.gui = function()
     end
 
 	-- Display pet name / level / distance
-	local dist  = ('%.1f'):fmt(math.sqrt(pet.Distance));
-	local x, _  = imgui.CalcTextSize(dist);
-	if (gConfig.params.settings.components.petName[1] == true) then
+	if (gConfig.params.settings.components.petName[1] == true and pet ~= nil) then
+		local dist  = ('%.1f'):fmt(math.sqrt(pet.Distance));
+		local x, _  = imgui.CalcTextSize(dist);
 		if (gConfig.params.mobInfo.mobLevel > 0) then
 			local playerLvl = AshitaCore:GetMemoryManager():GetPlayer():GetMainJobLevel();
 			local petLvl = gConfig.params.mobInfo.mobLevel;
@@ -161,12 +161,16 @@ Jug.gui = function()
 			gConfig.params.mobInfo.charmUntil = gConfig.params.settings.charmUntil[1];
 		end
 
-		local duration = math.floor(gConfig.params.mobInfo.charmUntil - os.time());
-		local hrs = math.floor(duration / 3600);
-		local mins = math.floor((duration % 3600) / 60);
-		local secs = duration % 60;
+		if (pet ~= nil) then
+			local duration = math.floor(gConfig.params.mobInfo.charmUntil - os.time());
+			local hrs = math.floor(duration / 3600);
+			local mins = math.floor((duration % 3600) / 60);
+			local secs = duration % 60;
 
-        imgui.Text(string.format("Pet Duration: %01d:%02d:%02d", hrs, mins, secs));
+			imgui.Text(string.format("Pet Duration: %01d:%02d:%02d", hrs, mins, secs));
+		else
+			imgui.Text(string.format("Pet Duration: n/a"));
+		end
 	end
 
 	-- Display recasts

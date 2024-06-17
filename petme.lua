@@ -19,10 +19,10 @@
 * along with Ashita.  If not, see <https://www.gnu.org/licenses/>.
 --]]
 
-addon.author   = 'MathMatic';
+addon.author   = 'Mathemagic';
 addon.name     = 'PetMe';
 addon.desc     = 'Displays detailed pet information.';
-addon.version  = '2.0.4';
+addon.version  = '2.1.0';
 
 require ('common');
 local gPackets = require('packets');

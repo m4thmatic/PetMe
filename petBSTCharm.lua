@@ -137,9 +137,9 @@ Charm.gui = function()
     local pet = GetEntity(player.PetTargetIndex);
 
 	-- Display pet name / level / distance
-	local dist  = ('%.1f'):fmt(math.sqrt(pet.Distance));
-	local x, _  = imgui.CalcTextSize(dist);
-	if (gConfig.params.settings.components.petName[1] == true) then
+	if (gConfig.params.settings.components.petName[1] == true and pet ~= nil) then
+		local dist  = ('%.1f'):fmt(math.sqrt(pet.Distance));
+		local x, _  = imgui.CalcTextSize(dist);
 		if (gConfig.params.mobInfo.mobLevel > 0) then
 			local petLvl = gConfig.params.mobInfo.mobLevel;
 			imgui.Text(pet.Name .. " (Lvl " .. tostring(petLvl) .. ")");
@@ -153,15 +153,19 @@ Charm.gui = function()
 
 	-- Display pet duration
 	if (gConfig.params.settings.components.petDuration[1] == true) then
-		if (gConfig.params.mobInfo.charmUntil ~= 0) then
-			local duration = math.floor(gConfig.params.mobInfo.charmUntil - os.time());
-			local hrs = math.floor(duration / 3600);
-			local mins = math.floor((duration % 3600) / 60);
-			local secs = duration % 60;
+		if (pet ~= nil) then
+			if (gConfig.params.mobInfo.charmUntil ~= 0) then
+				local duration = math.floor(gConfig.params.mobInfo.charmUntil - os.time());
+				local hrs = math.floor(duration / 3600);
+				local mins = math.floor((duration % 3600) / 60);
+				local secs = duration % 60;
 
-            imgui.Text(string.format("Pet Duration: %01d:%02d:%02d", hrs, mins, secs));
+				imgui.Text(string.format("Charm Duration: %01d:%02d:%02d", hrs, mins, secs));
+			else
+				imgui.Text("Charm Duration: (Unknown)");
+			end
 		else
-			imgui.Text("Pet Duration: (Unknown)");
+			imgui.Text(string.format("Charm Duration: n/a"));
 		end
 	end
 
