@@ -132,7 +132,7 @@ Jug.gui = function()
     local player = GetPlayerEntity();
     local pet = GetEntity(player.PetTargetIndex);
 
-    if ((newJug == true) and (pet != nil)) then
+    if ((newJug == true) and (pet ~= nil)) then
         initJug(pet);
     end
 
