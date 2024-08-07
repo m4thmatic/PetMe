@@ -102,6 +102,11 @@ gui.renderMainWindow = function()
 	if (imgui.Begin('PetMe', true, bit.bor(ImGuiWindowFlags_NoDecoration))) then
 		imgui.SetWindowFontScale(gConfig.params.settings.window.scale[1]);
 
+		--local myIndex = AshitaCore:GetMemoryManager():GetParty():GetMemberTargetIndex(0);
+		--local petIndex = AshitaCore:GetMemoryManager():GetEntity():GetPetTargetIndex(myIndex);
+		--local Status = AshitaCore:GetMemoryManager():GetEntity():GetStatus(petIndex);
+		--imgui.Text("Status: " .. tostring(Status));
+	
 		if (pet == nil) then
 			imgui.Text("No active pet");
 			if (gConfig.params.mobInfo.lastPetType ~= gConfig.petType.NONE and gConfig.params.mobInfo.lastPetType ~= nil) then

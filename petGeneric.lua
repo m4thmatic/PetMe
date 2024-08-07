@@ -39,8 +39,6 @@ gPet.statBars = function(pet)
     imgui.ProgressBar(pettp / 3000,  { windowSize/3-10, 15*gConfig.params.settings.window.scale[1] }, tostring(pettp));
     imgui.PopStyleColor(1);
 
-    --imgui.Text("Status: " .. pet.Status);
-
 end
 
 
