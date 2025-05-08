@@ -54,7 +54,7 @@ gui.renderMenu = function()
 		imgui.ShowHelp('Hides the PetMe window when the log is open.');
 			
 		imgui.Checkbox('Always Show Window', gConfig.params.settings.components.alwaysVisible);
-		imgui.ShowHelp('Shows the PetMe window even when there is no pet.');
+		imgui.ShowHelp('Shows the PetMe window even when there is no pet (if pet based job).');
 
         imgui.Separator();
         imgui.Separator();

@@ -62,6 +62,23 @@ gFunctions.GetRewardRecast = function()
 	return recast, modifier;
 end
 
+gFunctions.isPetJob = function(player)
+	local mainjob = AshitaCore:GetMemoryManager():GetPlayer():GetMainJob()
+	local subjob = AshitaCore:GetMemoryManager():GetPlayer():GetSubJob()
+
+    if (
+        (mainjob == 9) or   --BST
+        (mainjob == 14) or  --DRG
+        (mainjob == 15) or  --SMN
+        (mainjob == 18) or  --PUP
+        (subjob == 9) or    --BST(sub)
+        (subjob == 15)      --SMN(sub)
+    ) then
+        return true
+    end
+
+    return false
+end
 
 --------------------------------------------------------------------------------
 -------------- This function is copied from the PetInfo addon ------------------

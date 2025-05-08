@@ -18,16 +18,16 @@ local summonList = {
     "Cait Sith",
     "Siren",
     "Atomos",
-    "Alexander†",
-    "Odin†",
-    "Fire Spirit",
-    "Ice Spirit",
-    "Air Spirit",
-    "Earth Spirit",
-    "Thunder Spirit",
-    "Water Spirit",
-    "Light Spirit",
-    "Dark Spirit",
+    "Alexander",
+    "Odin",
+    "FireSpirit",
+    "IceSpirit",
+    "AirSpirit",
+    "EarthSpirit",
+    "ThunderSpirit",
+    "WaterSpirit",
+    "LightSpirit",
+    "DarkSpirit",
 }
 
 --------------------------------------------------------------------
@@ -37,6 +37,7 @@ Smn.checkIsSummon = function(petName)
             return true;
         end
     end
+    print(petName)
 
 	return false;
 end

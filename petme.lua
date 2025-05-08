@@ -22,13 +22,14 @@
 addon.author   = 'Mathemagic';
 addon.name     = 'PetMe';
 addon.desc     = 'Displays detailed pet information.';
-addon.version  = '2.1.1';
+addon.version  = '2.1.2';
 
 require ('common');
 local gPackets = require('packets');
 local gGui = require('gui');
 local gConfig = require('config');
 local settings = require('settings');
+local gFunctions = require('helper');
 
 --------------------------------------------------------------------
 --[[
@@ -108,7 +109,7 @@ ashita.events.register('d3d_present', 'd3d_present_cb', function ()
 			gConfig.params.mobInfo.petType = gConfig.petType.NONE;
 		end
 
-		if ((pet ~= nil) or (gConfig.params.settings.components.alwaysVisible[1] == true)) then
+		if ((pet ~= nil) or (gFunctions.isPetJob(player) and (gConfig.params.settings.components.alwaysVisible[1] == true))) then
 			gGui.renderMainWindow();
 		end
 	end
