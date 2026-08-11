@@ -35,6 +35,7 @@ local defaultConfig = T{
 		hideMap			= T{true},
 		hideLog			= T{false},
 		alwaysVisible	= T{false},
+		addCHRMod		= T{false},
 	},
 
 	charmUntil			= T{0}, -- store jug pet charm time, in case of shutdown

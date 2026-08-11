@@ -37,7 +37,6 @@ Smn.checkIsSummon = function(petName)
             return true;
         end
     end
-    print(petName)
 
 	return false;
 end

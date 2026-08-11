@@ -52,9 +52,12 @@ gui.renderMenu = function()
 
 		imgui.Checkbox('Hide window when log is open', gConfig.params.settings.components.hideLog);
 		imgui.ShowHelp('Hides the PetMe window when the log is open.');
-			
+
 		imgui.Checkbox('Always Show Window', gConfig.params.settings.components.alwaysVisible);
 		imgui.ShowHelp('Shows the PetMe window even when there is no pet (if pet based job).');
+
+		imgui.Checkbox('Use CHR Modifier', gConfig.params.settings.components.addCHRMod);
+		imgui.ShowHelp('Use +CHR gear modifiers for charm duration calculations.');
 
         imgui.Separator();
         imgui.Separator();
@@ -100,7 +103,10 @@ gui.renderMainWindow = function()
 	imgui.PushStyleColor(ImGuiCol_Text, gConfig.params.settings.window.textColor);
 
 	if (imgui.Begin('PetMe', true, bit.bor(ImGuiWindowFlags_NoDecoration))) then
-		imgui.SetWindowFontScale(gConfig.params.settings.window.scale[1]);
+		--imgui.SetWindowFontScale(gConfig.params.settings.window.scale[1]);
+		local defaultFont = imgui.GetFont();
+		local defaultFontSize = imgui.GetFontSize();
+		imgui.PushFont(defaultFont, defaultFontSize * gConfig.params.settings.window.scale[1]);
 
 		--local myIndex = AshitaCore:GetMemoryManager():GetParty():GetMemberTargetIndex(0);
 		--local petIndex = AshitaCore:GetMemoryManager():GetEntity():GetPetTargetIndex(myIndex);
@@ -143,7 +149,8 @@ gui.renderMainWindow = function()
 
 		end
 
-		imgui.SetWindowFontScale(1.0); -- reset window scale
+		imgui.PopFont();
+		--imgui.SetWindowFontScale(1.0); -- reset window scale
     end
     imgui.PopStyleColor(3);
 	imgui.End();

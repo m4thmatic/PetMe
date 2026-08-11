@@ -22,7 +22,7 @@
 addon.author   = 'Mathemagic';
 addon.name     = 'PetMe';
 addon.desc     = 'Displays detailed pet information.';
-addon.version  = '2.1.2';
+addon.version  = '2.2.0';
 
 require ('common');
 local gPackets = require('packets');
